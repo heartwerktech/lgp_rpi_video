@@ -13,32 +13,25 @@ DEFAULT_IMAGE = "kapelle.png"  # Default image to show between videos
 # Global variable to keep track of background image process
 background_process = None
 
+def ensure_display_env():
+    """Ensure DISPLAY environment variable is set"""
+    my_env = os.environ.copy()
+    if "DISPLAY" not in my_env or not my_env["DISPLAY"]:
+        my_env["DISPLAY"] = ":0"
+    return my_env
+
 def setup_background_image(image_path):
-    """
-    Display an image in the background that persists until the script exits
-    """
+    """Display an image in the background that persists until the script exits"""
     global background_process
     
     if not os.path.exists(image_path):
-        print(f"ERROR: {image_path} not found in the current directory: {os.getcwd()}")
+        print(f"Error: {image_path} not found")
         return None
         
-    # Print debugging info
-    print(f"Setting up background image: {image_path}")
-    print(f"Current directory: {os.getcwd()}")
-        
     try:
-        # First try a much simpler approach - just using feh to directly display the image
-        # This is the most reliable method
-        my_env = os.environ.copy()
-        if "DISPLAY" not in my_env or not my_env["DISPLAY"]:
-            my_env["DISPLAY"] = ":0"
-        
-        print(f"Using DISPLAY={my_env['DISPLAY']}")
-        
-        # Try a simpler command with fewer options
+        # Try feh first (preferred method)
+        my_env = ensure_display_env()
         cmd = ["feh", "--fullscreen", image_path]
-        print(f"Running command: {' '.join(cmd)}")
         
         background_process = subprocess.Popen(
             cmd,
@@ -50,39 +43,29 @@ def setup_background_image(image_path):
         # Check if process started successfully
         time.sleep(1)
         if background_process.poll() is not None:
-            # Process already exited, get error message
-            _, stderr = background_process.communicate()
-            print(f"Error starting feh: {stderr.decode()}")
-            
-            # Try alternative method with VLC
+            # Process already exited, try VLC
             return setup_background_with_vlc(image_path)
         
         # Register cleanup function
         atexit.register(cleanup_background)
-        print("Background image setup successfully")
         return background_process
         
     except FileNotFoundError:
-        print("feh is not installed. Trying alternative with VLC...")
+        # Feh not installed, try VLC
         return setup_background_with_vlc(image_path)
-    except Exception as e:
-        print(f"Error setting up background with feh: {str(e)}")
+    except Exception:
+        # Any other error, try VLC
         return setup_background_with_vlc(image_path)
 
 def setup_background_with_vlc(image_path):
     """Alternative method using VLC to display background"""
     global background_process
     
-    print("Attempting to set up background with VLC...")
     try:
-        my_env = os.environ.copy()
-        if "DISPLAY" not in my_env or not my_env["DISPLAY"]:
-            my_env["DISPLAY"] = ":0"
-            
+        my_env = ensure_display_env()
         # Use VLC to display the image
         cmd = ["cvlc", "--video-wallpaper", "--no-audio", 
                "--image-duration", "-1", "--loop", image_path]
-        print(f"Running VLC command: {' '.join(cmd)}")
         
         background_process = subprocess.Popen(
             cmd,
@@ -94,40 +77,27 @@ def setup_background_with_vlc(image_path):
         # Check if process started successfully
         time.sleep(1)
         if background_process.poll() is not None:
-            # Process already exited
-            _, stderr = background_process.communicate()
-            print(f"Error starting VLC: {stderr.decode()}")
             return None
         
         atexit.register(cleanup_background)
-        print("Background image setup with VLC successfully")
         return background_process
-    except Exception as e:
-        print(f"Error setting up background with VLC: {str(e)}")
+    except Exception:
         return None
 
 def cleanup_background():
     """Clean up background process when script exits"""
     global background_process
     if background_process:
-        print("Cleaning up background process...")
         background_process.terminate()
         background_process = None
 
 def play(file_path):
+    """Play video file using VLC in fullscreen mode"""
     if not os.path.exists(file_path):
-        print(f"{file_path} not found in the current directory: {os.getcwd()}")
+        print(f"Error: {file_path} not found")
     else:
-        print(f"Playing video: {file_path}")
         try:
-            # Set environment variables for VLC
-            my_env = os.environ.copy()
-            if "DISPLAY" not in my_env or not my_env["DISPLAY"]:
-                my_env["DISPLAY"] = ":0"
-            
-            print(f"Using DISPLAY={my_env['DISPLAY']} for video playback")
-            
-            # Run VLC with overlay on top of background
+            my_env = ensure_display_env()
             subprocess.run(
                 ["cvlc", "--play-and-exit", "--fullscreen", "--no-video-title-show", file_path],
                 env=my_env
@@ -142,22 +112,15 @@ def display_image(image_path, duration=None):
     :param duration: How long to display the image in seconds (None = until manually closed)
     """
     if not os.path.exists(image_path):
-        print(f"{image_path} not found in the current directory: {os.getcwd()}")
+        print(f"Error: {image_path} not found")
         return
 
-    print(f"Displaying image: {image_path}" + (f" for {duration} seconds" if duration else ""))
-    
     try:
-        # Set environment variables
-        my_env = os.environ.copy()
-        if "DISPLAY" not in my_env or not my_env["DISPLAY"]:
-            my_env["DISPLAY"] = ":0"
+        # Try using feh first
+        my_env = ensure_display_env()
         
-        print(f"Using DISPLAY={my_env['DISPLAY']}")
-        
-        # If duration is specified, display for that duration then exit
         if duration:
-            # feh with auto-zoom and fullscreen
+            # Display for specific duration
             proc = subprocess.Popen(
                 ["feh", "--fullscreen", "--auto-zoom", image_path],
                 env=my_env
@@ -171,9 +134,9 @@ def display_image(image_path, duration=None):
                 env=my_env
             )
     except FileNotFoundError:
-        print("feh is not installed. Using VLC as fallback...")
+        # Fall back to VLC if feh not available
         try:
-            # Try using VLC as a fallback
+            my_env = ensure_display_env()
             if duration:
                 subprocess.run(
                     ["cvlc", "--play-and-exit", "--fullscreen", 
@@ -190,23 +153,17 @@ def display_image(image_path, duration=None):
             print("Neither feh nor VLC is installed.")
 
 if __name__ == "__main__":
-    print(f"Starting script with Python {sys.version}")
-    print(f"Current working directory: {os.getcwd()}")
-    print(f"Environment DISPLAY: {os.environ.get('DISPLAY', 'Not set')}")
-    
-    # Try to ensure DISPLAY is set
-    if "DISPLAY" not in os.environ or not os.environ["DISPLAY"]:
-        os.environ["DISPLAY"] = ":0"
-        print("Set DISPLAY=:0")
+    # Ensure DISPLAY is set
+    os.environ.setdefault("DISPLAY", ":0")
     
     # Setup background image that persists
     bg = setup_background_image(DEFAULT_IMAGE)
     if not bg:
-        print("Failed to set up background image. Continuing without background.")
+        print("Failed to set up background image.")
     
     time.sleep(2) 
     
-    # Now play videos - they will appear on top of the background
+    # Play videos
     play(VIDEO_FILE1)
     time.sleep(2) 
     play(VIDEO_FILE2)
