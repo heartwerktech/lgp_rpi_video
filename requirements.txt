@@ -1,0 +1,8 @@
+# Common dependencies
+python-vlc==3.0.18121
+opencv-python>=4.5.0
+numpy>=1.20.0
+
+# Raspberry Pi specific dependencies
+# Install these only on the Raspberry Pi device:
+# RPi.GPIO>=0.7.0 
