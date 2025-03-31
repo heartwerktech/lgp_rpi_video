@@ -1,6 +1,6 @@
 import RPi.GPIO as GPIO
 import vlc
-
+import time
 BUTTON_PIN = 40
 
 def check_sensor_state():
@@ -53,6 +53,9 @@ def main():
     while True:
         # Sensor code goes here
         triggered = check_sensor_state()
+
+        # delay for 3 seconds
+        time.sleep(3)
 
         # Swap video if needed
         if triggered and current_video == video1:
