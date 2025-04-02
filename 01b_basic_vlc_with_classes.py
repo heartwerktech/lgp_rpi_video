@@ -1,5 +1,5 @@
 import vlc
-
+import time
 
 class VLCMediaPlayer():
     def __init__(self):
@@ -46,10 +46,18 @@ def main():
 
     player.load_videos("video1.mp4", "video2.mp4")
 
+    print("Starting main loop")
+
     while True:
         # Sensor code goes here
-        triggered = check_sensor_state()
-        player.update()
+        # triggered = check_sensor_state()
+        # check time and every 10 seconds set triggered to True
+        if time.time() % 10 == 0:
+            triggered = True
+        else:
+            triggered = False
+        
+        player.update(True)    
 
 if __name__ == '__main__':
     main()

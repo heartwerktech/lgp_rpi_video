@@ -6,8 +6,10 @@ import signal
 import atexit
 import sys
 
-VIDEO_FILE1 = "kaya1.mp4"
 # VIDEO_FILE1 = "video1.mp4"
+# VIDEO_FILE1 = "kaya1.mp4"
+VIDEO_FILE1 = "kurz.mp4"
+
 VIDEO_FILE2 = "video2.mp4"
 DEFAULT_IMAGE = "kapelle.png"  # Default image to show between videos
 
